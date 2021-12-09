@@ -95,11 +95,17 @@ class Scenario(BaseScenario):
         if agent.collide:
             for a in world.agents:
                 for b in world.agents:
-                    if a is b: continue
+                    if a is b:
+                        continue
                     if self.is_collision(a, b):
                         rew -= 0.5
         return rew
 
+    '''
+        obs 3 agents or preys, only depends on number rather than on distance
+        which is not as practice as i think before
+        -- dai, 2021/11/23
+    '''
     def observation(self, agent, world):
         # get positions of predefined preys
         entity_pos = []
@@ -121,5 +127,4 @@ class Scenario(BaseScenario):
         sort_index = sorted(range(len(dis_agent_n)), key=lambda k: dis_agent_n[k])
         near_agent_pos = [other_pos[sort_index[i]] for i in range(num_agents_obs)]
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + near_lm_pos + near_agent_pos)
-
 

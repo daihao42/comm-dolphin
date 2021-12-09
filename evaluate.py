@@ -76,13 +76,16 @@ if __name__ == '__main__':
     obs_n = env.reset()
     actions = env.action_space
 
+    print(env.agents)
+
     import numpy as np
     import time
 
-    while True : 
+    while True or not done: 
 
         action_n = [np.array([[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))]]) for i in range(env.n_agents)]
-        #time.sleep(0.5)
+
+        time.sleep(0.1)
 
         new_obs_n, rew_n, done_n, info_n = env.step(action_n)
 
