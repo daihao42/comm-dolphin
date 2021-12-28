@@ -1,6 +1,3 @@
-# import tensorflow as tf
-# print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-
 # import torch
 # flag = torch.cuda.is_available()
 # print(flag)
@@ -14,9 +11,9 @@
 
 import argparse
 import numpy as np
-import tensorflow as tf
 import time
 import pickle
+from models.ActorNet import ActorNet
 
 
 def parse_args():
@@ -76,23 +73,52 @@ if __name__ == '__main__':
     obs_n = env.reset()
     actions = env.action_space
 
-    print(env.agents)
-
     import numpy as np
     import time
+    from algorithms.dqn import DQN
+
+    def createLearners():
+        learners = []
+        for i in range(len(env.agents)):
+            net = ActorNet(observation_shape=obs_n[0].shape,num_actions=len(actions))
+            learner = DQN(env,0.001,1000,100,0.001,net)
+            learners.append(learner)
+        return learners
+
+
+    learners = createLearners()
+
+    print(learners)
+
+    rollouts = 0
 
     while True or not done: 
 
-        action_n = [np.array([[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))],[np.random.randint(len(actions))]]) for i in range(env.n_agents)]
+        action_n = [[learners[i].choose_action([obs_n[i]]).detach().numpy()[0]] for i in range(len(learners))]
 
         time.sleep(0.1)
 
         new_obs_n, rew_n, done_n, info_n = env.step(action_n)
 
-        print(rew_n, done_n, info_n)
+        for i in range(len(learners)):
+            learners[i].store_transition(obs_n[i], action_n[i],rew_n[i],new_obs_n[i])
+
+        print(rew_n, action_n, done_n, info_n)
 
         env.render()
+
         done = all(done_n)
+
+        obs_n = new_obs_n
+        
+        rollouts += 1
+
+        if(rollouts == 50):
+            print("-------------- start training -------------")
+            for learn in learners:
+                learn.learn()
+            rollouts = 0
+            print("-------------- end training -------------")
 
         if done:
             break

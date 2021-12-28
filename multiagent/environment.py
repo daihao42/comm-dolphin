@@ -197,7 +197,8 @@ class MultiAgentEnv(gym.Env):
                 index += s
             action = act
         else:
-            action = [action]
+            #action = [action]
+            pass
 
         if agent.movable:
             # physical action

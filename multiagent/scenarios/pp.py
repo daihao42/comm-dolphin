@@ -82,6 +82,7 @@ class Scenario(BaseScenario):
         collision_dist = agent1.size + agent2.size
         return True if dist < collision_dist else False
 
+    # for any cooperate agents, they get the same global reward
     def reward(self, agent, world):
         # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
         rew = 0
