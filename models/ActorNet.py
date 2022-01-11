@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 class ActorNet(nn.Module):
 
-    def __init__(self, observation_shape:tuple, num_actions:int, nonlinear=F.relu, hidden = 64):
+    def __init__(self, observation_shape:tuple, num_actions:int, nonlinear=F.relu, hidden = 128):
         super(ActorNet, self).__init__()
         
         self.fc1 = nn.Linear(observation_shape[0], hidden)

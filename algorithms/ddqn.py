@@ -14,7 +14,7 @@ from models.ActorNet import ActorNet
 
 __author__ = 'dai'
 
-class DQN():
+class DDQN():
     def __init__(self, env, initial_epsilon, epsilon_decremental, memory_capacity, target_replace_iter, learning_rate, observation_shape, num_actions, num_agents, logger) -> None:
 
         self.num_actions = num_actions
@@ -61,11 +61,9 @@ class DQN():
 
     def choose_action(self,x):
         if np.random.uniform() >= self.epsilon:
-            #print("------ dqn action ------")
             x = th.tensor(x, dtype = th.float).to(self.device)
             return self.eval_net(x).cpu().detach().numpy()
         else:
-            #print("------ random action ------")
             return np.random.rand(1,self.num_actions)[0]
     
     def replace_parameters(self):
@@ -81,15 +79,40 @@ class DQN():
         b_s = th.FloatTensor([x[0] for x in b_memory])
         b_a = th.LongTensor([x[1] for x in b_memory])
         #b_r = th.FloatTensor([x[2] for x in b_memory])
-        b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_agents) for x in b_memory]).reshape(-1))
+        b_r = th.FloatTensor(np.array([np.repeat(x[2],7) for x in b_memory]).reshape(-1))
         b_s_ = th.FloatTensor([x[3] for x in b_memory])
 
-        # train
-        #q_eval = self.eval_net(b_s.to(self.device)).max(1)[0] # shape (batch, 1)
-        #q_next = self.target_net(b_s_.to(self.device)).detach().max(1)[0] # detach from graph, don't backpropagate
+        '''
+        
+	odata[0]
+	>>tensor([[ 0.2893, -0.0434,  0.0402, -0.0237,  0.0689],
+		[ 0.2602, -0.0337,  0.0780, -0.1334, -0.0147],
+		[-0.0032,  0.0756, -0.2571, -0.1774, -0.0014],
+		[ 0.0097, -0.0077,  0.0522, -0.0435,  0.0314],
+		[ 0.0013,  0.0495,  0.0320,  0.2127,  0.1564],
+		[ 0.0336, -0.1632, -0.0285,  0.0473, -0.0933],
+		[ 0.1981,  0.0734, -0.0160,  0.0946,  0.0058]], device='cuda:0',
+	       grad_fn=<SelectBackward0>)
 
-        q_eval = self.eval_net(b_s.to(self.device)).reshape(-1,5).max(1)[0] # shape (batch, 1)
-        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1,5).max(1)[0] # detach from graph, don't backpropagate
+	odata[[0,0],[0,1],[0,0]]
+	>>tensor([0.2893, 0.2602], device='cuda:0', grad_fn=<IndexBackward0>)
+
+	odata[[0,0,0,0,0,0,0],[0,1,2,3,4,5,6],[1,1,1,1,1,1,1]]
+	>>tensor([-0.0434, -0.0337,  0.0756, -0.0077,  0.0495, -0.1632,  0.0734],
+	       device='cuda:0', grad_fn=<IndexBackward0>)
+        '''
+
+        # train
+        eval_raw = self.eval_net(b_s.to(self.device)).reshape(-1,5)
+        q_eval = eval_raw.max(1)[0] # shape (batch, 1)
+
+        # conduct mix index for q_next
+        a_index = eval_raw.max(1)[1].reshape(-1) # action from eval_net
+        ii_x = np.array([np.repeat(x,self.num_agents) for x in range(batch_size)]).reshape(-1)
+        ii_y = np.array([range(self.num_agents) for i in range(batch_size)]).reshape(-1)
+
+        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1, self.num_agents, int(self.num_actions / self.num_agents))[ii_x,ii_y,a_index] # detach from graph, don't backpropagate
+
         q_target = b_r.to(self.device) + gamma * q_next   # shape (batch, 1)
         loss = self.loss_func(q_eval, q_target)
         
@@ -108,7 +131,4 @@ class DQN():
             self.replace_parameters()
             self.epsilon -= self.epsilon_decremental
             #print("---- replace_parameters and decrease epsilon to {} !!".format(self.epsilon))
-
-    def saveModel(self, path):
-        th.save(self.eval_net,path)
 

@@ -1,20 +1,35 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import torch as th
+import torch.nn as nn
+import torch.nn.functional as F
 
 from collections import deque
 import numpy as np
-import torch as th
-import torch.nn as nn
 
 import random
 
-from torch.autograd import Variable
+class DuelingNet(nn.Module):
 
-from models.ActorNet import ActorNet
+    def __init__(self, observation_shape:tuple, num_actions:int, nonlinear=F.relu, hidden = 128):
+        super(DuelingNet, self).__init__()
+        
+        self.fc1 = nn.Linear(observation_shape[0], hidden)
+        self.fc2 = nn.Linear(hidden, hidden)
+        self.s_fc3 = nn.Linear(hidden,1)
+        self.a_fc3 = nn.Linear(hidden,num_actions)
+        self.nonlinear = nonlinear
 
-__author__ = 'dai'
+    def forward(self, inputs):
+        x = self.nonlinear(self.fc1(inputs))
+        x = self.nonlinear(self.fc2(x))
+        s = self.s_fc3(x)
+        a = self.a_fc3(x)
+        return s, a
 
-class DQN():
+
+class DuelingDQN():
+
     def __init__(self, env, initial_epsilon, epsilon_decremental, memory_capacity, target_replace_iter, learning_rate, observation_shape, num_actions, num_agents, logger) -> None:
 
         self.num_actions = num_actions
@@ -23,8 +38,8 @@ class DQN():
 
         self.logger = logger
 
-        self.eval_net = ActorNet(observation_shape, num_actions)
-        self.target_net = ActorNet(observation_shape, num_actions)
+        self.eval_net = DuelingNet(observation_shape, num_actions)
+        self.target_net = DuelingNet(observation_shape, num_actions)
         
         # epsilon greedy
         self.epsilon = initial_epsilon
@@ -61,11 +76,10 @@ class DQN():
 
     def choose_action(self,x):
         if np.random.uniform() >= self.epsilon:
-            #print("------ dqn action ------")
             x = th.tensor(x, dtype = th.float).to(self.device)
-            return self.eval_net(x).cpu().detach().numpy()
+            _, a = self.eval_net(x)
+            return a.cpu().detach().numpy()
         else:
-            #print("------ random action ------")
             return np.random.rand(1,self.num_actions)[0]
     
     def replace_parameters(self):
@@ -81,16 +95,22 @@ class DQN():
         b_s = th.FloatTensor([x[0] for x in b_memory])
         b_a = th.LongTensor([x[1] for x in b_memory])
         #b_r = th.FloatTensor([x[2] for x in b_memory])
-        b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_agents) for x in b_memory]).reshape(-1))
+        b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_actions) for x in b_memory]))
         b_s_ = th.FloatTensor([x[3] for x in b_memory])
 
-        # train
-        #q_eval = self.eval_net(b_s.to(self.device)).max(1)[0] # shape (batch, 1)
-        #q_next = self.target_net(b_s_.to(self.device)).detach().max(1)[0] # detach from graph, don't backpropagate
+       # train
+        e_s, e_a = self.eval_net(b_s.to(self.device))
 
-        q_eval = self.eval_net(b_s.to(self.device)).reshape(-1,5).max(1)[0] # shape (batch, 1)
-        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1,5).max(1)[0] # detach from graph, don't backpropagate
+        q_eval = e_s + e_a - th.mean(e_a, dim=1).reshape(-1,1)
+
+        e_s_, e_a_ = self.target_net(b_s_.to(self.device))
+
+        e_s_, e_a_ = (e_s_.detach(), e_a_.detach())
+
+        q_next = e_s_ + e_a_ - th.mean(e_a_, dim=1).reshape(-1,1) #.reshape(-1,5).max(1)[0]
+
         q_target = b_r.to(self.device) + gamma * q_next   # shape (batch, 1)
+
         loss = self.loss_func(q_eval, q_target)
         
         # back propagation
@@ -108,7 +128,3 @@ class DQN():
             self.replace_parameters()
             self.epsilon -= self.epsilon_decremental
             #print("---- replace_parameters and decrease epsilon to {} !!".format(self.epsilon))
-
-    def saveModel(self, path):
-        th.save(self.eval_net,path)
-
