@@ -132,3 +132,7 @@ class DDQN():
             self.epsilon -= self.epsilon_decremental
             #print("---- replace_parameters and decrease epsilon to {} !!".format(self.epsilon))
 
+    def saveModel(self, path):
+        th.save(self.eval_net,path)
+
+

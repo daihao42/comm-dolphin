@@ -20,6 +20,7 @@ import time
 from algorithms.dqn import DQN
 from algorithms.ddqn import DDQN
 from algorithms.dueling_dqn import DuelingDQN
+from algorithms.pg import PolicyGradient
 
 
 def parse_args():
@@ -119,10 +120,58 @@ def global_train(arglist, env, learner):
 
         if(rollouts % arglist.max_episode_len == 0):
             logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
+            print("-------------- start training -------------")
+            learner.learn(gamma=arglist.gamma, batch_size=arglist.batch_size)
+            print("-------------- end training -------------")
+
+        if done:
+            env.close()
+            env.reset()
+            obs_n = env.state()
+        else:
+            pass
+
+    learner.saveModel("saved/{}-{}".format(arglist.algorithm, arglist.num_episodes))
+
+
+def global_policy_train(arglist, env, learner):
+
+    obs_n = env.state()
+        
+    rollouts = 0
+
+    for epoch in range(arglist.num_episodes):
+
+        action_n = learner.choose_action(obs_n)
+
+        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+
+        new_obs_n = env.state()
+
+        # global reward
+        learner.store_transition(np.array(obs_n), np.array(action_n), rew_n["agent_0"])
+
+        env.render()
+
+        #done = all(done_n)
+        done = any(done_n)
+
+        obs_n = new_obs_n
+
+        #time.sleep(0.1)
+        
+        rollouts += 1
+
+        epoch += 1
+
+        logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
+
+        if(rollouts % arglist.max_episode_len == 0):
+            logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
 
         if(rollouts % learn_step == 0):
             print("-------------- start training -------------")
-            learner.learn(gamma=arglist.gamma, batch_size=arglist.batch_size)
+            learner.learn(gamma=arglist.gamma)
             print("-------------- end training -------------")
 
         if done:
@@ -156,8 +205,7 @@ if __name__ == '__main__':
 
     logger = Logger(arglist.log_dir)
    
-    def conductLearner(algorithm):
-        learner = {"dqn" : DQN(env,
+    learnerConduct = {"dqn" : (DQN(env,
                       initial_epsilon=initial_epsilon,
                       epsilon_decremental=epsilon_decremental,
                       memory_capacity=5000, target_replace_iter=target_replace_iter,
@@ -165,8 +213,8 @@ if __name__ == '__main__':
                       observation_shape=obs_n.shape,
                       num_actions=env.action_space * env.num_agent,
                       num_agents = env.num_agent,
-                      logger = logger),
-                    "ddqn" : DDQN(env,
+                      logger = logger), global_train),
+                    "ddqn" : (DDQN(env,
                       initial_epsilon=initial_epsilon,
                       epsilon_decremental=epsilon_decremental,
                       memory_capacity=5000, target_replace_iter=target_replace_iter,
@@ -174,8 +222,8 @@ if __name__ == '__main__':
                       observation_shape=obs_n.shape,
                       num_actions=env.action_space * env.num_agent,
                       num_agents = env.num_agent,
-                      logger = logger),
-                     "duelingdqn" : DuelingDQN(env,
+                      logger = logger), global_train),
+                     "duelingdqn" : (DuelingDQN(env,
                       initial_epsilon=initial_epsilon,
                       epsilon_decremental=epsilon_decremental,
                       memory_capacity=5000, target_replace_iter=target_replace_iter,
@@ -183,12 +231,15 @@ if __name__ == '__main__':
                       observation_shape=obs_n.shape,
                       num_actions=env.action_space * env.num_agent,
                       num_agents = env.num_agent,
-                      logger = logger)
+                      logger = logger), global_train),
+                      "policygradient" : (PolicyGradient(env,
+                      learning_rate=arglist.lr,
+                      observation_shape=obs_n.shape,
+                      num_actions=env.action_space * env.num_agent,
+                      num_agents = env.num_agent,
+                      logger = logger), global_policy_train)
                    }
-        return learner[algorithm]
 
+    learner, train_func = learnerConduct[arglist.algorithm]
 
-    learner = conductLearner(arglist.algorithm)
-
-    global_train(arglist, env, learner)
-
+    train_func(arglist, env, learner)
