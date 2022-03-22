@@ -21,14 +21,14 @@ from algorithms.dqn import DQN
 from algorithms.ddqn import DDQN
 from algorithms.dueling_dqn import DuelingDQN
 from algorithms.pg import PolicyGradient
-
+from algorithms.maddpg import MADDPG
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
     # Environment
     parser.add_argument("--scenario", type=str, default="cn", help="name of the scenario script")
     parser.add_argument("--num-agents", type=int, default=3, help="number of agents in the scenario script")
-    parser.add_argument("--max-episode-len", type=int, default=40, help="maximum episode length")
+    parser.add_argument("--max-episode-len", type=int, default=100, help="maximum episode length")
     parser.add_argument("--num-episodes", type=int, default=400000, help="number of episodes")
     parser.add_argument("--continuous-actions", type=bool, default=False, help="continuous actions")
 
@@ -184,6 +184,75 @@ def global_policy_train(arglist, env, learner):
     learner.saveModel("saved/{}-{}".format(arglist.algorithm, arglist.num_episodes))
 
 
+def maddpg_train(arglist, env, learner):
+
+    #obs_n = env.state()
+
+    obs_n = [env.env.observe(i) for i in env.env.agents]
+        
+    rollouts = 0
+
+    done_n = [False for x in range(env.num_agent)]
+
+    for epoch in range(arglist.num_episodes):
+
+        g_action_n = learner.choose_action(obs_n)
+
+        action_n = [np.argmax(x) for x in g_action_n]
+
+        action_n, g_action_n = markDone(done_n, action_n, g_action_n)
+
+        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+
+        # global reward
+        learner.store_transition(np.array(obs_n), np.array(g_action_n), np.array(rew_n), np.array(new_obs_n), np.array(done_n) )
+
+        env.render()
+
+        obs_n = new_obs_n
+
+        #time.sleep(0.1)
+        
+        rollouts += 1
+
+        epoch += 1
+
+        logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
+
+        if(rollouts % learn_step == 0):
+            print("-------------- start training -------------")
+            learner.learn(batch_size=arglist.batch_size, gamma=arglist.gamma)
+            print("-------------- end training -------------")
+
+        done = all(done_n)
+        #done = any(done_n)
+
+        if done:
+            logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
+            env.close()
+            env.reset()
+            obs_n = [env.env.observe(i) for i in env.env.agents]
+            done_n = [False for x in range(env.num_agent)]
+        else:
+            pass
+
+    learner.saveModel("saved/{}-{}".format(arglist.algorithm, arglist.num_episodes))
+
+
+def markDone(done_n, action_n, g_action_n):
+    '''
+    since the action of a done agent must be 'None', marked it as 0, which means no_action in env.
+    '''
+    maction_n = []
+    saved_action_n = []
+    for i in range(len(action_n)):
+        if done_n[i]:
+            maction_n.append(None)
+            saved_action_n.append(np.zeros(len(g_action_n[i])))
+        else:
+            maction_n.append(action_n[i])
+            saved_action_n.append(g_action_n[i])
+    return maction_n, saved_action_n
 
 if __name__ == '__main__':
     arglist = parse_args()
@@ -205,7 +274,7 @@ if __name__ == '__main__':
 
     logger = Logger(arglist.log_dir)
    
-    learnerConduct = {"dqn" : (DQN(env,
+    learnerConstructor = {"dqn" : (DQN(env,
                       initial_epsilon=initial_epsilon,
                       epsilon_decremental=epsilon_decremental,
                       memory_capacity=5000, target_replace_iter=target_replace_iter,
@@ -237,9 +306,18 @@ if __name__ == '__main__':
                       observation_shape=obs_n.shape,
                       num_actions=env.action_space * env.num_agent,
                       num_agents = env.num_agent,
-                      logger = logger), global_policy_train)
+                      logger = logger), global_policy_train),
+                      "maddpg" : (MADDPG(env,
+                      learning_rate=arglist.lr,
+                      initial_epsilon=initial_epsilon,
+                      epsilon_decremental=epsilon_decremental,
+                      memory_capacity=5000, target_replace_iter=target_replace_iter,
+                      observation_shape=env.env.observe(env.env.agents[0]).shape,
+                      num_actions=env.action_space,
+                      num_agents = env.num_agent,
+                      logger = logger), maddpg_train)
                    }
 
-    learner, train_func = learnerConduct[arglist.algorithm]
+    learner, train_func = learnerConstructor[arglist.algorithm]
 
     train_func(arglist, env, learner)

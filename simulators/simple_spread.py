@@ -28,6 +28,9 @@ class Scenario():
 
         return obs_n
 
+    '''
+        bug fixed: the rewards and dones are make sense only after all agents take steps
+    '''
     def step(self, actions):
         obs_n = []
         done_n = []
@@ -35,11 +38,10 @@ class Scenario():
         reward_n = []
         for i,agent in enumerate(self.env.agents):
             self.env.step(actions[i])
-            if(i == 0):
-                reward_n = self.env.rewards
+        for i,agent in enumerate(self.env.agents):
+            reward_n = self.env.rewards
             obs_n.append(self.env.observe(agent=agent))
             done_n.append(self.env.dones[agent])
-
         return obs_n, reward_n, done_n, info_n
 
     def state(self):

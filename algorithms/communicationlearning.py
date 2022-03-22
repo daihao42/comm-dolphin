@@ -16,4 +16,19 @@ class CommRL(nn.Module):
         super().__init__()
         
 
+class AgentPolicy():
+
+    def __init__(self) -> None:
+        pass
+
+    def step(self):
+        pass
+
+class CriticPolicy():
+
+    def __init__(self) -> None:
+        pass
+
+    def update(self):
+        pass
 
