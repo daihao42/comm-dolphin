@@ -94,8 +94,8 @@ class DuelingDQN():
 
         b_s = th.FloatTensor([x[0] for x in b_memory])
         b_a = th.LongTensor([x[1] for x in b_memory])
-        #b_r = th.FloatTensor([x[2] for x in b_memory])
-        b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_actions) for x in b_memory]))
+        b_r = th.FloatTensor([x[2] for x in b_memory])
+        #b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_actions) for x in b_memory]))
         b_s_ = th.FloatTensor([x[3] for x in b_memory])
 
        # train
@@ -107,9 +107,10 @@ class DuelingDQN():
 
         e_s_, e_a_ = (e_s_.detach(), e_a_.detach())
 
-        q_next = e_s_ + e_a_ - th.mean(e_a_, dim=1).reshape(-1,1) #.reshape(-1,5).max(1)[0]
+        #q_next = e_s_ + e_a_ - th.mean(e_a_, dim=1).reshape(-1,1) #.reshape(-1,5).max(1)[0]
+        q_next = e_s_ + e_a_ - th.mean(e_a_) #.reshape(-1,5).max(1)[0]
 
-        q_target = b_r.to(self.device) + gamma * q_next   # shape (batch, 1)
+        q_target = b_r.max(1)[0].reshape(-1,1).to(self.device) + gamma * q_next   # shape (batch, 1)
 
         loss = self.loss_func(q_eval, q_target)
         

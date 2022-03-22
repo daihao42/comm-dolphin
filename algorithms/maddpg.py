@@ -174,7 +174,7 @@ class MADDPG():
         b_memory = random.sample(self.memory,batch_size)
         b_s = torch.FloatTensor([x[0] for x in b_memory]).to(self.device)
         b_a = torch.LongTensor([x[1] for x in b_memory]).to(self.device)
-        b_r = torch.FloatTensor([list(x[2].reshape(1,)[0].values()) for x in b_memory]).to(self.device)
+        b_r = torch.FloatTensor([x[2] for x in b_memory]).to(self.device)
         b_s_ = torch.FloatTensor([x[3] for x in b_memory]).to(self.device)
         b_d = torch.FloatTensor([x[4] for x in b_memory]).to(self.device)
 

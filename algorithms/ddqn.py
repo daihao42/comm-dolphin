@@ -78,8 +78,7 @@ class DDQN():
 
         b_s = th.FloatTensor([x[0] for x in b_memory])
         b_a = th.LongTensor([x[1] for x in b_memory])
-        #b_r = th.FloatTensor([x[2] for x in b_memory])
-        b_r = th.FloatTensor(np.array([np.repeat(x[2],7) for x in b_memory]).reshape(-1))
+        b_r = th.FloatTensor([x[2] for x in b_memory])
         b_s_ = th.FloatTensor([x[3] for x in b_memory])
 
         '''
@@ -103,15 +102,16 @@ class DDQN():
         '''
 
         # train
-        eval_raw = self.eval_net(b_s.to(self.device)).reshape(-1,5)
-        q_eval = eval_raw.max(1)[0] # shape (batch, 1)
+        eval_raw = self.eval_net(b_s.to(self.device)).reshape(-1,self.num_agents,int(self.num_actions/self.num_agents))
+        q_eval = eval_raw.max(2)[0] # shape (batch, 1)
 
         # conduct mix index for q_next
-        a_index = eval_raw.max(1)[1].reshape(-1) # action from eval_net
-        ii_x = np.array([np.repeat(x,self.num_agents) for x in range(batch_size)]).reshape(-1)
-        ii_y = np.array([range(self.num_agents) for i in range(batch_size)]).reshape(-1)
+        a_index = eval_raw.max(2)[1].reshape(-1,self.num_agents) # action from eval_net
+        #ii_x = np.array([np.repeat(x,self.num_agents) for x in range(batch_size)]).reshape(-1)
+        #ii_y = np.array([range(self.num_agents) for i in range(batch_size)]).reshape(-1)
 
-        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1, self.num_agents, int(self.num_actions / self.num_agents))[ii_x,ii_y,a_index] # detach from graph, don't backpropagate
+        #q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1, self.num_agents, int(self.num_actions / self.num_agents))[ii_x,ii_y,a_index] # detach from graph, don't backpropagate
+        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1, self.num_agents, int(self.num_actions / self.num_agents))[:,:,a_index] # detach from graph, don't backpropagate
 
         q_target = b_r.to(self.device) + gamma * q_next   # shape (batch, 1)
         loss = self.loss_func(q_eval, q_target)

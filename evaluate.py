@@ -97,7 +97,7 @@ def global_train(arglist, env, learner):
         new_obs_n = env.state()
 
         # global reward
-        learner.store_transition(np.array(obs_n), np.array(action_n), rew_n["agent_0"], np.array(new_obs_n))
+        learner.store_transition(np.array(obs_n), np.array(action_n), np.array(rew_n), np.array(new_obs_n))
 
         #logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
 
@@ -116,10 +116,9 @@ def global_train(arglist, env, learner):
 
         epoch += 1
 
-        logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
+        logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
 
         if(rollouts % arglist.max_episode_len == 0):
-            logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
             print("-------------- start training -------------")
             learner.learn(gamma=arglist.gamma, batch_size=arglist.batch_size)
             print("-------------- end training -------------")
@@ -128,6 +127,7 @@ def global_train(arglist, env, learner):
             env.close()
             env.reset()
             obs_n = env.state()
+            logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
         else:
             pass
 
@@ -140,6 +140,8 @@ def global_policy_train(arglist, env, learner):
         
     rollouts = 0
 
+    done_n = [False for x in range(env.num_agent)]
+
     for epoch in range(arglist.num_episodes):
 
         action_n = learner.choose_action(obs_n)
@@ -149,7 +151,7 @@ def global_policy_train(arglist, env, learner):
         new_obs_n = env.state()
 
         # global reward
-        learner.store_transition(np.array(obs_n), np.array(action_n), rew_n["agent_0"])
+        learner.store_transition(np.array(obs_n), np.array(action_n), np.array(rew_n))
 
         env.render()
 
@@ -164,20 +166,16 @@ def global_policy_train(arglist, env, learner):
 
         epoch += 1
 
-        logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
+        logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
 
-        if(rollouts % arglist.max_episode_len == 0):
-            logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
-
-        if(rollouts % learn_step == 0):
+        if done:
             print("-------------- start training -------------")
             learner.learn(gamma=arglist.gamma)
             print("-------------- end training -------------")
-
-        if done:
             env.close()
             env.reset()
             obs_n = env.state()
+            logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
         else:
             pass
 
@@ -217,7 +215,7 @@ def maddpg_train(arglist, env, learner):
 
         epoch += 1
 
-        logger.add_scalar('Global/Reward\\', rew_n["agent_0"], epoch)
+        logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
 
         if(rollouts % learn_step == 0):
             print("-------------- start training -------------")
@@ -228,7 +226,7 @@ def maddpg_train(arglist, env, learner):
         #done = any(done_n)
 
         if done:
-            logger.add_scalar('Global/Final_Reward\\', rew_n["agent_0"], epoch)
+            logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
             env.close()
             env.reset()
             obs_n = [env.env.observe(i) for i in env.env.agents]

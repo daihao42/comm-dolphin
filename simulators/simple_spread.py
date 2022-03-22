@@ -39,7 +39,7 @@ class Scenario():
         for i,agent in enumerate(self.env.agents):
             self.env.step(actions[i])
         for i,agent in enumerate(self.env.agents):
-            reward_n = self.env.rewards
+            reward_n.append(self.env.rewards[agent])
             obs_n.append(self.env.observe(agent=agent))
             done_n.append(self.env.dones[agent])
         return obs_n, reward_n, done_n, info_n

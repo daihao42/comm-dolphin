@@ -73,7 +73,8 @@ class PolicyGradient():
             discounted_ep_rs[t] = running_add
         discounted_ep_rs -= np.mean(discounted_ep_rs)
         discounted_ep_rs /= np.std(discounted_ep_rs)
-        return list(map(lambda x:np.repeat(x,self.num_agents),discounted_ep_rs))
+        #return list(map(lambda x:np.repeat(x,self.num_agents),discounted_ep_rs))
+        return discounted_ep_rs
 
     def learn(self, gamma):
 

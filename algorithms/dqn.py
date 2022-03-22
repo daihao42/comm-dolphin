@@ -80,16 +80,16 @@ class DQN():
 
         b_s = th.FloatTensor([x[0] for x in b_memory])
         b_a = th.LongTensor([x[1] for x in b_memory])
-        #b_r = th.FloatTensor([x[2] for x in b_memory])
-        b_r = th.FloatTensor(np.array([np.repeat(x[2],self.num_agents) for x in b_memory]).reshape(-1))
+        b_r = th.FloatTensor([x[2] for x in b_memory])
+        #b_r = th.FloatTensor([np.repeat(x[2],self.num_agents) for x in b_memory]).reshape(-1))
         b_s_ = th.FloatTensor([x[3] for x in b_memory])
 
         # train
         #q_eval = self.eval_net(b_s.to(self.device)).max(1)[0] # shape (batch, 1)
         #q_next = self.target_net(b_s_.to(self.device)).detach().max(1)[0] # detach from graph, don't backpropagate
 
-        q_eval = self.eval_net(b_s.to(self.device)).reshape(-1,5).max(1)[0] # shape (batch, 1)
-        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1,5).max(1)[0] # detach from graph, don't backpropagate
+        q_eval = self.eval_net(b_s.to(self.device)).reshape(-1,self.num_agents,int(self.num_actions/self.num_agents)).max(2)[0] # shape (batch, 1)
+        q_next = self.target_net(b_s_.to(self.device)).detach().reshape(-1,self.num_agents,int(self.num_actions/self.num_agents)).max(2)[0] # detach from graph, don't backpropagate
         q_target = b_r.to(self.device) + gamma * q_next   # shape (batch, 1)
         loss = self.loss_func(q_eval, q_target)
         
