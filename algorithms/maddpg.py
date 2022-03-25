@@ -186,9 +186,11 @@ class MADDPG():
         #self.logger.add_scalar('Global/Epsilon\\', self.epsilon, self.niter)
         #self.loss.append(loss.detach().cpu().numpy())
 
-        if(self.target_replace_iter_count % self.target_replace_iter == 0):
+        #if(self.target_replace_iter_count % self.target_replace_iter == 0):
             #self.replace_parameters()
-            self.epsilon -= self.epsilon_decremental
+            #self.epsilon -= self.epsilon_decremental
             #print("---- replace_parameters and decrease epsilon to {} !!".format(self.epsilon))
 
+    def saveModel(self, path):
+        [torch.save(a.policy,path+"agent_{}".format(i)) for i,a in enumerate(self.agents)]
 
