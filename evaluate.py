@@ -20,12 +20,16 @@ def parse_args():
     parser.add_argument("--num-agents", type=int, default=3, help="number of agents in the scenario script")
     parser.add_argument("--max-episode-len", type=int, default=100, help="maximum episode length")
     parser.add_argument("--continuous-actions", type=bool, default=False, help="continuous actions")
+    parser.add_argument("--num-episodes", type=int, default=400000, help="number of episodes")
+    parser.add_argument("--eval-episodes", type=int, default=1000, help="number of evaluate episodes")
+    parser.add_argument("--lr", type=float, default=1e-3, help="learning rate for Adam optimizer")
 
     parser.add_argument("--display", action="store_true", default=False)
 
     parser.add_argument("--algorithm", type=str, default="dqn", help="the training algorithm")
 
     parser.add_argument("--num-adversaries", type=int, default=0, help="number of adversaries")
+    parser.add_argument("--memory-capacity", type=int, default=1000, help="number of transitions in store memory")
     # Core training parameters
     # Checkpointing
     parser.add_argument("--save-dir", type=str, default="./tmp/policy/", help="directory in which training state and model should be saved")
@@ -41,17 +45,11 @@ def make_env(arglist):
     env = simulators.load(scenario_name + ".py").Scenario(num_agent=arglist.num_agents, max_cycles=arglist.max_episode_len, continuous_actions=arglist.continuous_actions, display=arglist.display)
     return env
 
-from torch.utils.tensorboard import SummaryWriter       
-
-def Logger(ldir):
-    writer = SummaryWriter("logs/{}_log_{}".format(ldir,datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")))
-    return writer
-
 def global_evaluate(arglist, env, learner):
 
     obs_n = env.state()
         
-    for epoch in range(arglist.num_episodes):
+    for epoch in range(arglist.eval_episodes):
 
         g_action_n = learner.choose_action(obs_n)
 
@@ -86,7 +84,7 @@ def global_policy_evaluate(arglist, env, learner):
 
     done_n = [False for x in range(env.num_agent)]
 
-    for epoch in range(arglist.num_episodes):
+    for epoch in range(arglist.eval_episodes):
 
         action_n = learner.choose_action(obs_n)
 
@@ -118,7 +116,7 @@ def maddpg_evaluate(arglist, env, learner):
         
     done_n = [False for x in range(env.num_agent)]
 
-    for epoch in range(arglist.num_episodes):
+    for epoch in range(arglist.eval_episodes):
 
         g_action_n = learner.choose_action(obs_n)
 
@@ -163,7 +161,7 @@ def markDone(done_n, action_n, g_action_n):
 
 
 def loadModel(arglist, learner):
-    path = "saved/{}-{}-{}".format(arglist.scenario_name, arglist.algorithm, arglist.num_episodes)
+    path = "saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes)
     
     loader = {"dqn": learner.eval_net.load_state_dict(torch.load(path)),
             "ddqn": learner.eval_net.load_state_dict(torch.load(path)),
@@ -183,16 +181,14 @@ if __name__ == '__main__':
 
     obs_n = env.state()
      
-    learn_step = arglist.batch_size
-
     initial_epsilon = 0
 
     target_replace_iter = 5
 
     epsilon_decremental = 0
 
-    logger = Logger(arglist.log_dir)
-   
+    logger = None
+
     learnerConstructor = {"dqn" : (DQN(env,
                       initial_epsilon=initial_epsilon,
                       epsilon_decremental=epsilon_decremental,

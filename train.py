@@ -132,7 +132,7 @@ def global_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario_name, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def global_policy_train(arglist, env, learner):
@@ -180,7 +180,7 @@ def global_policy_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario_name, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def maddpg_train(arglist, env, learner):
@@ -235,7 +235,7 @@ def maddpg_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario_name, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def markDone(done_n, action_n, g_action_n):
