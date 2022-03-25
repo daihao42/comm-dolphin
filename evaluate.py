@@ -25,6 +25,8 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-3, help="learning rate for Adam optimizer")
 
     parser.add_argument("--display", action="store_true", default=False)
+    parser.add_argument("--random-action", action="store_true", default=False)
+
 
     parser.add_argument("--algorithm", type=str, default="dqn", help="the training algorithm")
 
@@ -45,17 +47,29 @@ def make_env(arglist):
     env = simulators.load(scenario_name + ".py").Scenario(num_agent=arglist.num_agents, max_cycles=arglist.max_episode_len, continuous_actions=arglist.continuous_actions, display=arglist.display)
     return env
 
+def randomAction(arglist, env):
+    if arglist.scenario == "traffic_junction":
+        return env.env.action_space.sample()
+    else:
+        return [env.env.action_space(agent=env.env.agent_selection).sample() for i in env.env.agents]
+
 def global_evaluate(arglist, env, learner):
 
     obs_n = env.state()
         
     for epoch in range(arglist.eval_episodes):
 
-        g_action_n = learner.choose_action(obs_n)
+        if arglist.random_action:
 
-        r_action_n = np.array(g_action_n).reshape(-1, 5)
+            action_n = randomAction(arglist, env)
 
-        action_n = [np.argmax(x) for x in r_action_n]
+        else:
+
+            g_action_n = learner.choose_action(obs_n)
+
+            r_action_n = np.array(g_action_n).reshape(-1, 5)
+
+            action_n = [np.argmax(x) for x in r_action_n]
 
         new_obs_n, rew_n, done_n, info_n = env.step(action_n)
 
@@ -118,11 +132,17 @@ def maddpg_evaluate(arglist, env, learner):
 
     for epoch in range(arglist.eval_episodes):
 
-        g_action_n = learner.choose_action(obs_n)
+        if arglist.random_action:
 
-        action_n = [np.argmax(x) for x in g_action_n]
+            action_n = randomAction(arglist, env)
 
-        action_n, g_action_n = markDone(done_n, action_n, g_action_n)
+        else:
+
+            g_action_n = learner.choose_action(obs_n)
+
+            action_n = [np.argmax(x) for x in g_action_n]
+
+            action_n, g_action_n = markDone(done_n, action_n, g_action_n)
 
         new_obs_n, rew_n, done_n, info_n = env.step(action_n)
 
@@ -163,12 +183,17 @@ def markDone(done_n, action_n, g_action_n):
 def loadModel(arglist, learner):
     path = "saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes)
     
-    loader = {"dqn": learner.eval_net.load_state_dict(torch.load(path)),
-            "ddqn": learner.eval_net.load_state_dict(torch.load(path)),
-              "duelingdqn": learner.eval_net.load_state_dict(torch.load(path)),
-              "maddpg": [a.policy.load_state_dict(torch.load(path+"agent_{}".format(i))) for i,a in enumerate(learner.agents)]
-    }
-    loader[arglist.algorithm]
+    if arglist.algorithm == "dqn":
+        learner.eval_net.load_state_dict(torch.load(path).state_dict())
+    elif arglist.algorithm == "ddqn":
+        learner.eval_net.load_state_dict(torch.load(path).state_dict())
+    elif arglist.algorithm == "duelingdqn":
+        learner.eval_net.load_state_dict(torch.load(path).state_dict())
+    elif arglist.algorithm == "maddpg":
+        [a.policy.load_state_dict(torch.load(path+"agent_{}".format(i)).state_dict()) for i,a in enumerate(learner.agents)]
+    else:
+        pass
+
     return learner
 
 if __name__ == '__main__':

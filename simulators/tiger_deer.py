@@ -3,7 +3,7 @@
 
 __author__ = 'dai'
 
-from pettingzoo.mpe import simple_spread_v2
+from pettingzoo.magent import tiger_deer_v3
 import time
 
 
@@ -18,7 +18,7 @@ class Scenario():
         self.display = display
 
     def make_env(self):
-        return simple_spread_v2.env(N=self.num_agent, max_cycles=self.max_cycles, continuous_actions=self.continuous_actions)
+        return tiger_deer_v3.env(N=self.num_agent, max_cycles=self.max_cycles, continuous_actions=self.continuous_actions)
 
     def reset(self):
         self.env.reset()
