@@ -132,7 +132,7 @@ def global_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}/{}/{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def global_policy_train(arglist, env, learner):
@@ -180,7 +180,7 @@ def global_policy_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}/{}/{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def maddpg_train(arglist, env, learner):
@@ -218,15 +218,13 @@ def maddpg_train(arglist, env, learner):
 
         logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
 
-        if(rollouts % learn_step == 0):
-            print("-------------- start training -------------")
-            learner.learn(batch_size=arglist.batch_size, gamma=arglist.gamma)
-            print("-------------- end training -------------")
-
         done = all(done_n)
         #done = any(done_n)
 
         if done:
+            print("-------------- start training -------------")
+            learner.learn(batch_size=arglist.batch_size, gamma=arglist.gamma)
+            print("-------------- end training -------------")
             logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
             env.close()
             env.reset()
@@ -235,7 +233,7 @@ def maddpg_train(arglist, env, learner):
         else:
             pass
 
-    learner.saveModel("saved/{}-{}-{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
+    learner.saveModel("saved/{}/{}/{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
 
 def markDone(done_n, action_n, g_action_n):
@@ -265,7 +263,7 @@ if __name__ == '__main__':
      
     learn_step = arglist.batch_size
 
-    initial_epsilon = 0.5
+    initial_epsilon = 0.3
 
     target_replace_iter = 5
 
@@ -312,8 +310,10 @@ if __name__ == '__main__':
 
                       "maddpg" : (MADDPG(env,
                       learning_rate=arglist.lr,
-                      initial_epsilon=initial_epsilon,
-                      epsilon_decremental=epsilon_decremental,
+                      #initial_epsilon=initial_epsilon,
+                      #epsilon_decremental=(1-initial_epsilon) / (arglist.num_episodes / arglist.max_episode_len),
+                      initial_epsilon=0,
+                      epsilon_decremental=0,
                       memory_capacity=arglist.memory_capacity, target_replace_iter=target_replace_iter,
                       observation_shape=env.env.observe(env.env.agents[0]).shape,
                       num_actions=env.action_space,

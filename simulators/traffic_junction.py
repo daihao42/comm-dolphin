@@ -29,6 +29,7 @@ class Scenario():
         obs_n, reward_n, done_n, info_n = self.env.step(actions)
         self.ep_reward += sum(reward_n)
         return obs_n, [self.ep_reward for i in range(self.num_agent)], done_n, info_n, reward_n
+        #return obs_n, reward_n, done_n, info_n, reward_n
 
     def close(self):
         self.env.close()

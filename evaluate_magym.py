@@ -128,9 +128,9 @@ def global_policy_evaluate(arglist, env, learner):
 
 
 def maddpg_evaluate(arglist, env, learner):
+    
+    obs_n = env.env.get_agent_obs()
 
-    obs_n = [env.env.observe(i) for i in env.env.agents]
-        
     done_n = [False for x in range(env.num_agent)]
 
     for epoch in range(arglist.eval_episodes):
@@ -141,33 +141,30 @@ def maddpg_evaluate(arglist, env, learner):
 
         else:
 
-            g_action_n = learner.choose_action(obs_n, exploration=False)
+            g_action_n = learner.choose_action(obs_n)
 
             action_n = [np.argmax(x) for x in g_action_n]
 
-            action_n, g_action_n = markDone(done_n, action_n, g_action_n)
-
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, rew_n, done_n, info_n, _ = env.step(action_n)
 
         env.render()
 
         obs_n = new_obs_n
 
-        time.sleep(0.1)
+        print("reward:", rew_n)
 
+        time.sleep(0.5)
+        
         done = all(done_n)
         #done = any(done_n)
-
-        print(rew_n)
 
         if done:
             env.close()
             env.reset()
-            obs_n = [env.env.observe(i) for i in env.env.agents]
+            obs_n = env.env.get_agent_obs()
             done_n = [False for x in range(env.num_agent)]
         else:
             pass
-
 
 def markDone(done_n, action_n, g_action_n):
     '''

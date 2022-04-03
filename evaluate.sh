@@ -1,1 +1,2 @@
-python evaluate.py --scenario simple_spread --num-agent 7 --num-episodes 100000000 --algorithm ddqn --eval-episodes 500 --display #--random-action
+python evaluate.py --scenario simple_spread --num-agent 7 --num-episodes 10000 --algorithm maddpg --eval-episodes 500 --display 
+#python evaluate.py --scenario simple_spread --num-agent 7 --num-episodes 10000 --algorithm maddpg --eval-episodes 500 --display --random-action

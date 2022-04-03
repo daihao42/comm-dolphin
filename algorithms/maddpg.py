@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import torch
-from utils.networks import MLPNetwork
 from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax
 from models.ddpgagent import DDPGAgent
 from collections import deque
@@ -35,14 +34,14 @@ class MADDPG():
 
         self.niter = 0
 
-        self.agents = [DDPGAgent(lr=learning_rate,num_in_pol= observation_shape[0], num_out_pol=num_actions, num_in_critic=num_agents * (self.num_actions+observation_shape[0]), USE_CUDA=True)
-                        for i in range(num_agents)]
-        
         # epsilon greedy
         self.epsilon = initial_epsilon
 
         self.epsilon_decremental = epsilon_decremental
 
+        self.agents = [DDPGAgent(lr=learning_rate,num_in_pol= observation_shape[0], num_out_pol=num_actions, num_in_critic=num_agents * (self.num_actions+observation_shape[0]), USE_CUDA=True)
+                        for i in range(num_agents)]
+        
         # update iteration
         self.target_replace_iter = target_replace_iter
 
@@ -78,8 +77,14 @@ class MADDPG():
     Outputs:
 	actions: List of actions for each agent
     """
-    def choose_action(self, observations, explore=False):
-        return [a.step(torch.tensor(obs, dtype = torch.float).to(self.device), explore=explore) for a, obs in zip(self.agents, observations)]
+    def choose_action(self, observations, exploration=True):
+        if not exploration:
+            return [a.step(torch.tensor(obs, dtype = torch.float).to(self.device)) for a, obs in zip(self.agents, observations)]
+
+        if np.random.uniform() >= self.epsilon:
+            return [a.step(torch.tensor(obs, dtype = torch.float).to(self.device)) for a, obs in zip(self.agents, observations)]
+        else:
+            return [np.random.rand(1,self.num_actions)[0] for i in range(self.num_agents)]
 
     def update(self, sample, agent_i, gamma, parallel=False, logger=None):
         """
@@ -158,7 +163,10 @@ class MADDPG():
         for a in self.agents:
             soft_update(a.target_critic, a.critic, self.tau)
             soft_update(a.target_policy, a.policy, self.tau)
+
+        self.epsilon -= self.epsilon_decremental
         self.niter += 1
+        self.logger.add_scalar('Global/Epsilon\\', self.epsilon, self.niter)
 
     def store_transition(self, s, a, r, s_, d):
         self.memory_counter = self.memory_counter + 1

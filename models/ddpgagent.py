@@ -2,8 +2,8 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam
 from utils.networks import MLPNetwork
+from models.ActorNet import ActorNet
 from utils.misc import hard_update, gumbel_softmax, onehot_from_logits
-from utils.noise import OUNoise
 
 class DDPGAgent(object):
     """
@@ -11,27 +11,17 @@ class DDPGAgent(object):
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 lr=0.01, discrete_action=True, USE_CUDA = False):
+                 lr=0.01, epsilon = 0.5, discrete_action=True, USE_CUDA = True):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
-        self.policy = MLPNetwork(num_in_pol, num_out_pol,
-                                 hidden_dim=hidden_dim,
-                                 constrain_out=True,
-                                 discrete_action=discrete_action, USE_CUDA=USE_CUDA)
-        self.critic = MLPNetwork(num_in_critic, 1,
-                                 hidden_dim=hidden_dim,
-                                 constrain_out=False, USE_CUDA=USE_CUDA)
-        self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
-                                        hidden_dim=hidden_dim,
-                                        constrain_out=True,
-                                        discrete_action=discrete_action, USE_CUDA=USE_CUDA)
-        self.target_critic = MLPNetwork(num_in_critic, 1,
-                                        hidden_dim=hidden_dim,
-                                        constrain_out=False, USE_CUDA=USE_CUDA)
+        self.policy = ActorNet((num_in_pol,), num_out_pol)
+        self.critic = ActorNet((num_in_critic,), 1)
+        self.target_policy = ActorNet((num_in_pol,), num_out_pol)
+        self.target_critic = ActorNet((num_in_critic,), 1)
 
         if USE_CUDA:
             self.critic.cuda()
@@ -43,23 +33,9 @@ class DDPGAgent(object):
         hard_update(self.target_critic, self.critic)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
-        if not discrete_action:
-            self.exploration = OUNoise(num_out_pol)
-        else:
-            self.exploration = 0.3  # epsilon for eps-greedy
-        self.discrete_action = discrete_action
+        self.epsilon = epsilon  # epsilon for eps-greedy
 
-    def reset_noise(self):
-        if not self.discrete_action:
-            self.exploration.reset()
-
-    def scale_noise(self, scale):
-        if self.discrete_action:
-            self.exploration = scale
-        else:
-            self.exploration.scale = scale
-
-    def step(self, obs, explore=False):
+    def step(self, obs):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:

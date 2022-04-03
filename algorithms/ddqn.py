@@ -59,7 +59,11 @@ class DDQN():
         if(len(self.memory) > self.memory_capacity):
             self.memory.popleft()  
 
-    def choose_action(self,x):
+    def choose_action(self,x, exploration = True):
+        if not exploration:
+            x = th.tensor(x, dtype = th.float).to(self.device)
+            return self.eval_net(x).cpu().detach().numpy()
+
         if np.random.uniform() >= self.epsilon:
             x = th.tensor(x, dtype = th.float).to(self.device)
             return self.eval_net(x).cpu().detach().numpy()
