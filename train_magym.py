@@ -22,6 +22,7 @@ from algorithms.ddqn import DDQN
 from algorithms.dueling_dqn import DuelingDQN
 from algorithms.pg import PolicyGradient
 from algorithms.maddpg import MADDPG
+from algorithms.commnet import CommNet
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -182,6 +183,53 @@ def global_policy_train(arglist, env, learner):
 
     learner.saveModel("saved/{}/{}/{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
 
+def commnet_train(arglist, env, learner):
+
+    obs_n = env.env.get_agent_obs()
+
+    rollouts = 0
+
+    done_n = [False for x in range(env.num_agent)]
+
+    for epoch in range(arglist.num_episodes):
+
+        action_n = learner.choose_action(obs_n)
+
+        new_obs_n, rew_n, done_n, info_n, _ = env.step(action_n)
+
+        # global reward
+        learner.store_transition(np.array(obs_n), np.array(action_n), np.array(rew_n))
+
+        env.render()
+
+        #done = all(done_n)
+        done = any(done_n)
+
+        obs_n = new_obs_n
+
+        #time.sleep(0.1)
+        
+        rollouts += 1
+
+        epoch += 1
+
+        logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
+
+        if done:
+            print("-------------- start training -------------")
+            learner.learn(gamma=arglist.gamma)
+            print("-------------- end training -------------")
+            env.close()
+            env.reset()
+            obs_n = env.env.get_agent_obs()
+            logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
+            learner.clear_transition()
+            done_n = [False for x in range(env.num_agent)]
+        else:
+            pass
+
+    learner.saveModel("saved/{}/{}/{}".format(arglist.scenario, arglist.algorithm, arglist.num_episodes))
+
 
 def maddpg_train(arglist, env, learner):
 
@@ -314,7 +362,15 @@ if __name__ == '__main__':
                       observation_shape=env.observation_shape,
                       num_actions=env.action_space,
                       num_agents = env.num_agent,
-                      logger = logger), maddpg_train)
+                      logger = logger), maddpg_train),
+
+                      "commnet" : (CommNet(env,
+                      learning_rate=arglist.lr,
+                      observation_shape=env.observation_shape,
+                      num_actions=env.action_space,
+                      num_agents = env.num_agent,
+                      logger = logger), commnet_train)
+
                    }
 
     learner, train_func = learnerConstructor[arglist.algorithm]

@@ -226,6 +226,7 @@ def commnet_train(arglist, env, learner):
             obs_n = [env.env.observe(i) for i in env.env.agents] 
             logger.add_scalar('Global/Final_Reward\\', rew_n[0], epoch)
             learner.clear_transition()
+            done_n = [False for x in range(env.num_agent)]
         else:
             pass
 
