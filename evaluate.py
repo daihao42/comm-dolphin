@@ -12,6 +12,7 @@ from algorithms.ddqn import DDQN
 from algorithms.dueling_dqn import DuelingDQN
 from algorithms.pg import PolicyGradient
 from algorithms.maddpg import MADDPG
+from algorithms.commnet import CommNet
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -169,6 +170,44 @@ def maddpg_evaluate(arglist, env, learner):
             pass
 
 
+def commnet_evaluate(arglist, env, learner):
+
+    obs_n = [env.env.observe(i) for i in env.env.agents]       
+
+    done_n = [False for x in range(env.num_agent)]
+
+    for epoch in range(arglist.eval_episodes):
+
+        if arglist.random_action:
+
+            action_n = randomAction(arglist, env)
+
+        else:
+
+            action_n = learner.choose_action(obs_n)
+
+        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+
+        env.render()
+
+        #done = all(done_n)
+        done = any(done_n)
+
+        obs_n = new_obs_n
+
+        time.sleep(0.1)
+
+        print(rew_n)
+
+        if done:
+            env.close()
+            env.reset()
+            obs_n = [env.env.observe(i) for i in env.env.agents] 
+            done_n = [False for x in range(env.num_agent)]
+        else:
+            pass
+
+
 def markDone(done_n, action_n, g_action_n):
     '''
     since the action of a done agent must be 'None', marked it as 0, which means no_action in env.
@@ -274,7 +313,14 @@ if __name__ == '__main__':
                       observation_shape=observation_shape,
                       num_actions=env.action_space,
                       num_agents = env.num_agent,
-                      logger = logger), maddpg_evaluate)
+                      logger = logger), maddpg_evaluate),
+
+                      "commnet" : (CommNet(env,
+                      learning_rate=arglist.lr,
+                      observation_shape=env.env.observe(env.env.agents[0]).shape,
+                      num_actions=env.action_space,
+                      num_agents = env.num_agent,
+                      logger = logger), commnet_evaluate)
                    }
 
     learner, train_func = learnerConstructor[arglist.algorithm]
