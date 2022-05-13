@@ -94,7 +94,7 @@ def global_train(arglist, env, learner):
 
         action_n = [np.argmax(x) for x in r_action_n]
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, rew_n, done_n, info_n, _ = env.step(action_n)
 
         new_obs_n = env.state()
 
@@ -148,7 +148,7 @@ def global_policy_train(arglist, env, learner):
 
         action_n = learner.choose_action(obs_n)
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, rew_n, done_n, info_n, _ = env.step(action_n)
 
         new_obs_n = env.state()
 
@@ -197,10 +197,10 @@ def commnet_train(arglist, env, learner):
 
         action_n = learner.choose_action(obs_n)
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, delta_rew_n, done_n, info_n, rew_n = env.step(action_n)
 
         # global reward
-        learner.store_transition(np.array(obs_n), np.array(action_n), np.array(rew_n))
+        learner.store_transition(np.array(obs_n), np.array(action_n), np.array(delta_rew_n))
 
         env.render()
 
@@ -216,6 +216,7 @@ def commnet_train(arglist, env, learner):
         epoch += 1
 
         logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
+        logger.add_scalar('Global/Delta_Reward\\', delta_rew_n[0], epoch)
 
         if done:
             print("-------------- start training -------------")
@@ -251,10 +252,10 @@ def maddpg_train(arglist, env, learner):
 
         action_n, g_action_n = markDone(done_n, action_n, g_action_n)
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, delta_rew_n, done_n, info_n, rew_n = env.step(action_n)
 
         # global reward
-        learner.store_transition(np.array(obs_n), np.array(g_action_n), np.array(rew_n), np.array(new_obs_n), np.array(done_n) )
+        learner.store_transition(np.array(obs_n), np.array(g_action_n), np.array(delta_rew_n), np.array(new_obs_n), np.array(done_n) )
 
         env.render()
 
@@ -266,6 +267,7 @@ def maddpg_train(arglist, env, learner):
 
         epoch += 1
 
+        logger.add_scalar('Global/Delta_Reward\\', delta_rew_n[0], epoch)
         logger.add_scalar('Global/Reward\\', rew_n[0], epoch)
 
         done = all(done_n)

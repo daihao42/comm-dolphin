@@ -16,6 +16,7 @@ class Scenario():
         self.env = self.make_env()
         self.action_space = self.env.action_space(agent="agent_0").n
         self.display = display
+        self.last_reward = []
 
     def make_env(self):
         return simple_spread_v2.env(N=self.num_agent, max_cycles=self.max_cycles, continuous_actions=self.continuous_actions)
@@ -23,8 +24,12 @@ class Scenario():
     def reset(self):
         self.env.reset()
         obs_n = []
+        rew_n = []
         for i,agent in enumerate(self.env.agents):
             obs_n.append(self.env.observe(agent=agent))
+            rew_n.append(self.env.rewards[agent])
+
+        self.last_reward = rew_n
 
         return obs_n
 
@@ -42,7 +47,13 @@ class Scenario():
             reward_n.append(self.env.rewards[agent])
             obs_n.append(self.env.observe(agent=agent))
             done_n.append(self.env.dones[agent])
-        return obs_n, reward_n, done_n, info_n
+
+        delta_reward_n = []
+        for i,agent in enumerate(self.env.agents):
+            delta_reward_n.append(reward_n[i] - self.last_reward[i])
+
+        self.last_reward = reward_n
+        return obs_n, delta_reward_n, done_n, info_n, reward_n
 
     def state(self):
         return self.env.state()

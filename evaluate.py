@@ -75,7 +75,7 @@ def global_evaluate(arglist, env, learner):
 
             action_n = [np.argmax(x) for x in r_action_n]
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, rew_n, done_n, info_n, _ = env.step(action_n)
 
         new_obs_n = env.state()
 
@@ -148,7 +148,7 @@ def maddpg_evaluate(arglist, env, learner):
 
             action_n, g_action_n = markDone(done_n, action_n, g_action_n)
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, delta_rew_n, done_n, info_n, rew_n = env.step(action_n)
 
         env.render()
 
@@ -159,6 +159,7 @@ def maddpg_evaluate(arglist, env, learner):
         done = all(done_n)
         #done = any(done_n)
 
+        print(delta_rew_n)
         print(rew_n)
 
         if done:
@@ -186,7 +187,7 @@ def commnet_evaluate(arglist, env, learner):
 
             action_n = learner.choose_action(obs_n)
 
-        new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+        new_obs_n, delta_rew_n, done_n, info_n, rew_n = env.step(action_n)
 
         env.render()
 
@@ -197,6 +198,7 @@ def commnet_evaluate(arglist, env, learner):
 
         time.sleep(0.1)
 
+        print(rew_n)
         print(rew_n)
 
         if done:
