@@ -5,6 +5,7 @@ __author__ = 'dai'
 
 from pettingzoo.mpe import simple_spread_v2
 import time
+import numpy as np
 
 
 class Scenario():
@@ -44,16 +45,34 @@ class Scenario():
         for i,agent in enumerate(self.env.agents):
             self.env.step(actions[i])
         for i,agent in enumerate(self.env.agents):
-            reward_n.append(self.env.rewards[agent])
+            #reward_n.append(self.env.rewards[agent])
             obs_n.append(self.env.observe(agent=agent))
             done_n.append(self.env.dones[agent])
 
+        reward_n = np.repeat(self.global_reward(),self.num_agent)
         delta_reward_n = []
         for i,agent in enumerate(self.env.agents):
             delta_reward_n.append(reward_n[i] - self.last_reward[i])
 
         self.last_reward = reward_n
-        return obs_n, delta_reward_n, done_n, info_n, reward_n
+        #return obs_n, delta_reward_n, done_n, info_n, reward_n
+        return obs_n, reward_n, done_n, info_n, reward_n
+
+    def bound_env(self, actions):
+        for i,agent in enumerate(self.env.agents):
+            if 
+
+
+    '''
+        min distance used in petting, i changed it to max
+    '''
+    def global_reward(self):
+        world = self.env.env.env.world
+        rew = 0
+        for l in world.landmarks:
+            dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
+            rew -= max(dists)
+        return rew
 
     def state(self):
         return self.env.state()

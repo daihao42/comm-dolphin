@@ -84,6 +84,8 @@ def global_evaluate(arglist, env, learner):
         #done = all(done_n)
         done = any(done_n)
 
+        print(rew_n)
+
         obs_n = new_obs_n
 
         time.sleep(0.1)
