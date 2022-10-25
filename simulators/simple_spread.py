@@ -58,9 +58,9 @@ class Scenario():
         #return obs_n, delta_reward_n, done_n, info_n, reward_n
         return obs_n, reward_n, done_n, info_n, reward_n
 
-    def bound_env(self, actions):
-        for i,agent in enumerate(self.env.agents):
-            if 
+    #def bound_env(self, actions):
+    #    for i,agent in enumerate(self.env.agents):
+    #        if 
 
 
     '''
